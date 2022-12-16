@@ -40,7 +40,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|   [   |    |    ]  |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|    |-------|      |   _  |   +  |   {  |   }  |   |  |
  * `-----------------------------------------/       /     \      \-----------------------------------------'
- *                   |LCTRL | LGUI |LOWER | /Space  /       \Enter \  |RAISE |BackSP| RAlt |
+ *                   |LCTRL | LGUI |LOWER | /Space  /       \Enter \  |RAISE | Del  | RAlt |
  *                   |      |      |      |/       /         \      \ |      |      |      |
  *                   `----------------------------'           '------''--------------------'
  */
@@ -49,7 +49,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,                     KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,
   KC_GRV,  KC_EXLM, KC_AT,   KC_HASH, KC_DLR,  KC_PERC,                   KC_CIRC, KC_AMPR, KC_ASTR, KC_LPRN, KC_RPRN, KC_TILD,
   _______, _______, _______, _______, _______, _______, _______, _______, XXXXXXX, KC_UNDS, KC_PLUS, KC_LCBR, KC_RCBR, KC_PIPE,
-                             _______, _______, _______, _______, _______,  _______, _______, _______
+                             _______, _______, _______, _______, _______, _______, KC_DEL, _______
 ),
 /* RAISE
  * ,-----------------------------------------.                    ,-----------------------------------------.
@@ -71,7 +71,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,                        KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    _______,
   KC_F1,  KC_F2,    KC_F3,   KC_F4,   KC_F5,   KC_F6,                       KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, XXXXXXX, XXXXXXX,
   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,   _______, _______,  KC_PLUS, KC_MINS, KC_EQL,  KC_LBRC, KC_RBRC, KC_BSLS,
-                             _______, _______, _______,  _______, _______,  _______, _______, _______
+                             _______, _______, _______,  _______, _______,  _______, KC_BSPC, _______
 ),
 /* ADJUST
  * ,-----------------------------------------.                    ,-----------------------------------------.
@@ -137,9 +137,6 @@ bool oled_task_user(void) {
 }
 #endif // OLED_ENABLE
 
-// Initialize variable holding the binary representation of active modifiers.
-uint8_t mod_state;
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   if (record->event.pressed) {
 #ifdef OLED_ENABLE
@@ -147,44 +144,5 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 #endif
     // set_timelog();
   }
-
-  /* Shift+Backspace=Del */
-  // https://github.com/qmk/qmk_firmware/blob/master/docs/feature_advanced_keycodes.md#shift--backspace-for-delete-idshift-backspace-for-delete
-  // Store the current modifier state in the variable for later reference
-  mod_state = get_mods();
-  switch (keycode) {
-  case KC_BSPC:
-     {
-        // Initialize a boolean variable that keeps track
-        // of the delete key status: registered or not?
-        static bool delkey_registered;
-        if (record->event.pressed) {
-           // Detect the activation of either shift keys
-           if (mod_state & MOD_MASK_SHIFT) {
-              // First temporarily canceling both shifts so that
-              // shift isn't applied to the KC_DEL keycode
-              del_mods(MOD_MASK_SHIFT);
-              register_code(KC_DEL);
-              // Update the boolean variable to reflect the status of KC_DEL
-              delkey_registered = true;
-              // Reapplying modifier state so that the held shift key(s)
-              // still work even after having tapped the Backspace/Delete key.
-              set_mods(mod_state);
-              return false;
-           }
-        } else { // on release of KC_BSPC
-           // In case KC_DEL is still being sent even after the release of KC_BSPC
-           if (delkey_registered) {
-              unregister_code(KC_DEL);
-              delkey_registered = false;
-              return false;
-           }
-        }
-        // Let QMK process the KC_BSPC keycode as usual outside of shift
-        return true;
-     }
-  }
-  /* Shift+Backspace=Del */
-
   return true;
 }
